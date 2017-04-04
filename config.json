@@ -2,7 +2,19 @@
     "ciBuildApiUrl": "",
     "ciBuildUsername": "",
     "ciBuildApiToken": "",
-    "ciDevApiUrl": "",
+    "ciToMonitor": [
+        {
+            "name": "ciOpen",
+            "style": "open",
+            "apiUrl": ""
+        },
+        {
+            "name": "ciDev",
+            "style": "closed",
+            "apiUrl": ""
+        }
+    ],
+    // "ciDevApiUrl": "",
     "githubApiUrl": "",
     "githubUsername": "",
     "githubAccessToken": "",
