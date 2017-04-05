@@ -24,7 +24,7 @@ function testCiDevAuthentication()
 
 function getBuildStatusesForAllProjects()
 {
-    const projectsBuildsPromises = config.projects.map(project => ciDev.getBuildStatuses(project));
+    const projectsBuildsPromises = config.ciDevProjects.map(project => ciDev.getBuildStatuses(project));
     return q.all(projectsBuildsPromises);
 }
 
@@ -66,7 +66,7 @@ function unleashTheReleasingPower()
             // Gathering commit numbers that don't have git tags on them.
             const promises = projectsBuildStatuses.map((buildStatuses, projectIndex) =>
             {
-                const projectName = config.projects[projectIndex];
+                const projectName = config.ciDevProjects[projectIndex];
                 return getLatestNotYetBuiltGitSHAs(projectName, buildStatuses);
             });
             return q.all(promises);
@@ -83,11 +83,11 @@ function unleashTheReleasingPower()
             const currentBuildStatus = results[1];
             const buildQueue = results[2];
 
-            const projectsGitCommits = config.projects.map(project => []);
+            const projectsGitCommits = config.ciDevProjects.map(project => []);
 
             projectsNotYetBuildSHAs.forEach((gitCommitsToBuild, projectIndex) =>
             {
-                const projectName = config.projects[projectIndex];
+                const projectName = config.ciDevProjects[projectIndex];
 
                 // Check if the particular project is in progress or has queued build
                 // Do not schedule builds from the same project as the 'create-an-internal-release' job sucks and can't handle concurrent builds

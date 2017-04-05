@@ -3,11 +3,12 @@ const chalk = require("chalk");
 const q = require("q");
 const request = require("request");
 
-function JenkinsClient(url, username, apiToken)
+function JenkinsClient(url, username, apiToken, style)
 {
     this.m_url = url;
     this.m_username = username;
     this.m_apiToken = apiToken;
+    this.m_style = style; // open or closed
     this.m_buildStatusesCache = {};
 }
 

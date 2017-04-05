@@ -9,6 +9,17 @@ const ciBuildJenkinsClient = new Jenkins(config.ciBuildApiUrl, config.ciBuildUse
 
 ciBuildJenkinsClient.getCurrentBuildStatus = function ()
 {
+    getOpenCurrentBuildStatus();
+    getInternalCurrentBuildStatus();
+};
+
+ciBuildJenkinsClient.getOpenCurrentBuildStatus = function ()
+{
+
+};
+
+ciBuildJenkinsClient.getInternalCurrentBuildStatus = function ()
+{
     console.log('Getting current build status on "${this.m_url}".');
 
     const deferred = q.defer();
@@ -89,9 +100,52 @@ ciBuildJenkinsClient.getQueuedBuilds = function ()
     return deferred.promise;
 };
 
-ciBuildJenkinsClient.startBuild = function (projectName, gitCommit)
+ciBuildJenkinsClient.ciOpenStartBuild = function (projectName, gitCommit)
 {
-    console.log(`Starting the build for "${projectName}" with commit sha "${gitCommit}".`);
+    console.log(`Creating an open release for the build "${projectName}" with commit sha "${gitCommit}".`);
+
+    const requestOptions =
+        {
+            method: "POST",
+            url: `${this.m_url}job/create-a-release/buildWithParameters`,
+            headers:
+                {
+                    "Content-Type": "application/json"
+                },
+            qs:
+                {
+                    ARTIFACT_NAME: projectName,
+                    RELEASE_CANDIDATE_VERSION: gitCommit,
+                    RELEASE_TYPE: "MINOR"
+                }
+        };
+
+    function requestComplete(error, response)
+    {
+        if (error || response.status < 200 || response.status > 299)
+        {
+            const message = `Could not start build for "${projectName}" with commit sha "${gitCommit}".`;
+            console.error(chalk.red(message));
+            deferred.reject(message);
+        }
+        else
+        {
+            console.log(chalk.green("Success."));
+            deferred.resolve();
+        }
+    }
+
+    console.log("Starting a build with following parameters: ", requestOptions);
+
+    const deferred = q.defer();
+    // deferred.resolve();
+    this.authenticate(request(requestOptions, requestComplete));
+    return deferred.promise;
+};
+
+ciBuildJenkinsClient.ciDevStartBuild = function (projectName, gitCommit)
+{
+    console.log(`Starting the build for internal "${projectName}" with commit sha "${gitCommit}".`);
 
     const requestOptions =
     {
@@ -131,33 +185,64 @@ ciBuildJenkinsClient.startBuild = function (projectName, gitCommit)
     return deferred.promise;
 };
 
-ciBuildJenkinsClient.scheduleBuilds = function (projectsGitCommits)
+ciBuildJenkinsClient.scheduleBuilds = function (ciDevProjectsGitCommits, ciOpenProjectsGitCommits)
 {
-    let projectIndex = 0;
+    let ciDevProjectIndex = 0;
+    let ciOpenProjectIndex = 0;
     let commitIndex = 0;
 
     const startNextBuild = () =>
     {
+      triggerBuildForCiDevProject();
+      triggerBuildForCiOpenProject();
+    };
+
+    const triggerBuildForCiOpenProject = () =>
+    {
         // Check if done with starting builds. Finish if so.
-        if (projectIndex >= projectsGitCommits.length)
+        if (ciOpenProjectIndex >= ciOpenProjectsGitCommits.length)
             return null;
 
-        const gitCommits = projectsGitCommits[projectIndex];
+        const gitCommits = ciOpenProjectsGitCommits[ciDevProjectIndex];
 
         // Check if done with a particular project. Move on to the next one
         if (commitIndex >= gitCommits.length)
         {
-            projectIndex++;
+            ciOpenProjectIndex++;
             commitIndex = 0;
             return startNextBuild();
         }
 
-        const projectName = config.projects[projectIndex];
+        const projectName = config.ciOpenProjects[ciDevProjectIndex];
         const commitSHA = gitCommits[commitIndex];
 
         commitIndex++;
 
-        return this.startBuild(projectName, commitSHA).then(startNextBuild);
+        return this.ciOpenStartBuild(projectName, commitSHA).then(triggerBuildForCiOpenProject);
+    };
+
+    const triggerBuildForCiDevProject = () =>
+    {
+        // Check if done with starting builds. Finish if so.
+        if (ciDevProjectIndex >= ciDevProjectsGitCommits.length)
+            return null;
+
+        const gitCommits = ciDevProjectsGitCommits[ciDevProjectIndex];
+
+        // Check if done with a particular project. Move on to the next one
+        if (commitIndex >= gitCommits.length)
+        {
+            ciDevProjectIndex++;
+            commitIndex = 0;
+            return startNextBuild();
+        }
+
+        const projectName = config.ciDevProjects[ciDevProjectIndex];
+        const commitSHA = gitCommits[commitIndex];
+
+        commitIndex++;
+
+        return this.ciDevStartBuild(projectName, commitSHA).then(triggerBuildForCiDevProject);
     };
 
     return startNextBuild();
