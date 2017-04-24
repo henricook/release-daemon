@@ -2,10 +2,14 @@
     "ciBuildApiUrl": "",
     "ciBuildUsername": "",
     "ciBuildApiToken": "",
+    "ciOpenApiUrl": "",
+    "ciOpenUsername": "",
+    "ciOpenApiToken": "",
     "ciDevApiUrl": "",
     "githubApiUrl": "",
     "githubUsername": "",
     "githubAccessToken": "",
-    "projects": [],
+    "ciDevProjects": [],
+    "ciOpenProjects": [],
     "updateTime": 300000
 }

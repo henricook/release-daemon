@@ -5,11 +5,11 @@ const Jenkins = require("./jenkins");
 const q = require("q");
 const request = require("request");
 
-const ciBuildJenkinsClient = new Jenkins(config.ciBuildApiUrl, config.ciBuildUsername, config.ciBuildApiToken);
+const ciOpenJenkinsClient = new Jenkins(config.ciOpenApiUrl, config.ciOpenUsername, config.ciOpenApiToken);
 
-ciBuildJenkinsClient.getCurrentBuildStatus = function ()
+ciOpenJenkinsClient.getCurrentBuildStatus = function ()
 {
-    console.log(`[Build] Getting current build status on "${this.m_url}".`);
+    console.log(`[Open] Getting current build status on "${this.m_url}".`);
 
     const deferred = q.defer();
 
@@ -23,14 +23,14 @@ ciBuildJenkinsClient.getCurrentBuildStatus = function ()
         {
             if (error || response.statusCode !== 200)
             {
-                const message = "[Build] The request to get current build status has failed.";
+                const message = "[Open] The request to get current build status has failed.";
                 console.error(chalk.red(message));
 
                 deferred.reject(message);
             }
             else
             {
-                console.log(chalk.green("Success."));
+                console.log(chalk.green("[Open] Success."));
 
                 const buildsInProgress = JSON.parse(data).builds.filter(build => build.result === null);
                 this.m_currentBuildStatusCache = buildsInProgress ? buildsInProgress.map(bip => new BuildStatus(bip)) : null;
@@ -38,15 +38,15 @@ ciBuildJenkinsClient.getCurrentBuildStatus = function ()
             }
         };
 
-        this.authenticate(request.get(`${this.m_url}job/create-an-internal-release/api/json?tree=builds[result,description,actions[parameters[name,value]]]`, requestComplete));
+        this.authenticate(request.get(`${this.m_url}job/create-a-release/api/json?tree=builds[result,description,actions[parameters[name,value]]]`, requestComplete));
     }
 
     return deferred.promise;
 };
 
-ciBuildJenkinsClient.getQueuedBuilds = function ()
+ciOpenJenkinsClient.getQueuedBuilds = function ()
 {
-    console.log(`[Build] Getting builds queue on "${this.m_url}".`);
+    console.log(`[Open] Getting builds queue on "${this.m_url}".`);
 
     const deferred = q.defer();
 
@@ -60,7 +60,7 @@ ciBuildJenkinsClient.getQueuedBuilds = function ()
         {
             if (error || response.statusCode !== 200)
             {
-                const message = "[Build] The request to get current build status has failed.";
+                const message = "[Open] The request to get current build status has failed.";
                 console.error(chalk.red(message));
 
                 deferred.reject(message);
@@ -89,14 +89,14 @@ ciBuildJenkinsClient.getQueuedBuilds = function ()
     return deferred.promise;
 };
 
-ciBuildJenkinsClient.startBuild = function (projectName, gitCommit)
+ciOpenJenkinsClient.startBuild = function (projectName, versionGitHash)
 {
-    console.log(`[Build] Starting the build for "${projectName}" with commit sha "${gitCommit}".`);
+    console.log(`[Open] Starting the build for "${projectName}" with git version hash "${versionGitHash}".`);
 
     const requestOptions =
     {
         method: "POST",
-        url: `${this.m_url}job/create-an-internal-release/buildWithParameters`,
+        url: `${this.m_url}job/create-a-release/buildWithParameters`,
         headers:
         {
             "Content-Type": "application/json"
@@ -104,7 +104,7 @@ ciBuildJenkinsClient.startBuild = function (projectName, gitCommit)
         qs:
         {
             ARTIFACT_NAME: projectName,
-            GIT_COMMIT_ID: gitCommit
+            RELEASE_CANDIDATE_VERSION: versionGitHash
         }
     };
 
@@ -112,18 +112,18 @@ ciBuildJenkinsClient.startBuild = function (projectName, gitCommit)
     {
         if (error || response.status < 200 || response.status > 299)
         {
-            const message = `[Build] Could not start build for "${projectName}" with commit sha "${gitCommit}".`;
+            const message = `[Open] Could not start build for "${projectName}" with git version hash "${versionGitHash}".`;
             console.error(chalk.red(message));
             deferred.reject(message);
         }
         else
         {
-            console.log(chalk.green("[Build] Success."));
+            console.log(chalk.green("[Open] Success."));
             deferred.resolve();
         }
     }
 
-    console.log("[Build] Starting a build with following parameters: ", requestOptions);
+    console.log("[Open] Starting a create-a-release build with following parameters: ", requestOptions);
 
     const deferred = q.defer();
     // deferred.resolve();
@@ -131,7 +131,7 @@ ciBuildJenkinsClient.startBuild = function (projectName, gitCommit)
     return deferred.promise;
 };
 
-ciBuildJenkinsClient.scheduleBuilds = function (projectsGitCommits)
+ciOpenJenkinsClient.scheduleBuilds = function (projectsGitCommits)
 {
     let projectIndex = 0;
     let commitIndex = 0;
@@ -163,4 +163,4 @@ ciBuildJenkinsClient.scheduleBuilds = function (projectsGitCommits)
     return startNextBuild();
 };
 
-module.exports = ciBuildJenkinsClient;
+module.exports = ciOpenJenkinsClient;
